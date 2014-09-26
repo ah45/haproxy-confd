@@ -1,0 +1,37 @@
+#!/bin/bash
+
+print-usage() {
+	echo "
+Usage: build-config <command> [<args>]
+
+Available commands:
+    once       build the configuration and exit
+    iterative  watch for changes to the configuration KV store and
+               re-build the configuration when a change occurs
+    help       show this help
+
+Environment variables:
+    CONFD_OPTS   appended to the end of the confd command line
+                 can be set to override default options or those
+                 set in the configuration file
+"
+}
+
+build-once() {
+	confd -onetime $CONFD_OPTS
+}
+
+build-iterative() {
+	confd $CONFD_OPTS
+}
+
+main() {
+	case "$1" in
+	once)      shift; build-once $@;;
+	iterative) shift; build-iterative $@;;
+	help)      shift; print-usage;;
+	*)         print-usage;;
+	esac
+}
+
+main "$@"

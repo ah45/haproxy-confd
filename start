@@ -1,0 +1,27 @@
+#!/bin/bash
+CONFD="/etc/confd"
+OVERRIDE="/confd-override"
+MAIN_CONFIG="confd.toml"
+TEMPLATES="templates"
+
+if [[ -d "$OVERRIDE" ]]; then
+	# symlink main confd configuration if it's been provided
+	if [[ -f "$OVERRIDE/$MAIN_CONFIG" ]]; then
+		echo "[start] overriding $CONFD/$MAIN_CONFIG"
+		rm -f "$CONFD/$MAIN_CONFIG"
+		ln -s "$OVERRIDE/$MAIN_CONFIG" "$CONFD/$MAIN_CONFIG"
+	fi
+
+	# symlink any provided template files
+	if [[ -d "$OVERRIDE/$TEMPLATES" ]]; then
+		for f in $(ls "$OVERRIDE/$TEMPLATES/"); do
+			echo "[start] overriding $CONFD/$TEMPLATES/$f"
+			rm -fr "$CONFD/$TEMPLATES/$f"
+			ln -s "$OVERRIDE/$TEMPLATES/$f" "$CONFD/$TEMPLATES/$f"
+		done
+	fi
+fi
+
+/build-config once
+/etc/init.d/haproxy start
+/build-config iterative

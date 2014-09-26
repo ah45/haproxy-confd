@@ -1,0 +1,56 @@
+global
+  log 127.0.0.1 local0
+  log 127.0.0.1 local1 notice
+  chroot /var/lib/haproxy
+  user haproxy
+  group haproxy
+  tune.ssl.default-dh-param 2048
+
+defaults
+  log global
+  mode http
+  timeout connect 5000
+  timeout client 50000
+  timeout server 50000
+  option httplog
+  option dontlognull
+  option forwardfor
+  option redispatch
+  stats enable
+  stats uri /haproxy-stats
+
+frontend http
+  bind :80
+  bind :443 ssl crt /etc/ssl/private/
+
+  reqadd X-Forwarded-Proto:\ http  if !{ ssl_fc }
+  reqadd X-Forwarded-Proto:\ https if  { ssl_fc }
+
+  {{range gets "/frontends/*"}}
+    {{$host_acl := (base .Key)}}
+    {{$force_ssl := getv (print .Key "/force-ssl")}}
+    {{$host_match := (print "hdr(host) -i " $host_acl)}}
+    {{$default_backend := getv (print .Key "/default-backend")}}
+
+    {{if eq $force_ssl "true"}}
+      acl {{$host_acl}} {{$host_match}}
+      redirect scheme https code 301 if {{$host_acl}} !{ ssl_fc }
+    {{end}}
+
+    {{range gets (print .Key "/locations/*")}}
+      {{$acl_name := print $host_acl "-" (base .Key)}}
+      acl {{$acl_name}} path_reg -i {{getv (print .Key "/path")}}
+      use_backend {{getv (print .Key "/backend")}} if {{$acl_name}}
+    {{end}}
+
+    {{if gt (len $default_backend) 0}}
+      use_backend {{$default_backend}} if {{$host_acl}}
+    {{end}}
+  {{end}}
+
+{{range gets "/backends/*"}}
+backend {{base .Key}}
+  {{range gets (print .Key "/*")}}
+    server {{base .Key}} {{.Value}}
+  {{end}}
+{{end}}

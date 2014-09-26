@@ -1,0 +1,5 @@
+backend = "consul"
+confdir = "/etc/confd"
+debug = false
+interval = 10
+nodes = ["consul:8500"]

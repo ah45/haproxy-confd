@@ -1,0 +1,10 @@
+[template]
+src = "haproxy.conf.tmpl"
+dest = "/etc/haproxy/haproxy.cfg"
+prefix = "haproxy"
+keys = [
+  "frontend",
+  "backend"
+]
+check_cmd = "haproxy -c -f {{ .src }}"
+reload_cmd = "/etc/init.d/haproxy reload"
